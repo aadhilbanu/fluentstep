@@ -1,19 +1,19 @@
 // Database access through libSQL (SQLite-compatible).
 // Local development: a SQLite file in ./data. Production: a free Turso database,
 // set with TURSO_DATABASE_URL and TURSO_AUTH_TOKEN (hosting filesystems are often wiped on restart).
-import { createClient } from '@libsql/client';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
 let url = process.env.TURSO_DATABASE_URL;
 if (!url) {
-  const dataDir = path.join(here, '..', 'data');
+  const dataDir = path.join(process.cwd(), 'data');
   fs.mkdirSync(dataDir, { recursive: true });
   url = `file:${path.join(dataDir, 'fluentstep.db').replace(/\\/g, '/')}`;
 }
-const client = createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN });
+// The web client needs no native module, so it runs inside serverless functions.
+let clientPromise;
+const getClient = () => (clientPromise ??= (process.env.TURSO_DATABASE_URL ? import('@libsql/client/web') : import('@libsql/client'))
+  .then(({ createClient }) => createClient({ url, authToken: process.env.TURSO_AUTH_TOKEN })));
 export const dbLocation = process.env.TURSO_DATABASE_URL ? 'Turso (remote)' : 'local file data/fluentstep.db';
 
 const SCHEMA = `
@@ -112,9 +112,9 @@ CREATE TABLE IF NOT EXISTS videos (
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );`;
 
-export const initDb = () => client.executeMultiple(SCHEMA);
+export const initDb = async () => (await getClient()).executeMultiple(SCHEMA);
 
-const exec = (sql, args) => client.execute({ sql, args: args.map((a) => (a === undefined ? null : a)) });
+const exec = async (sql, args) => (await getClient()).execute({ sql, args: args.map((a) => (a === undefined ? null : a)) });
 export const q = {
   get: async (sql, ...args) => (await exec(sql, args)).rows[0],
   all: async (sql, ...args) => (await exec(sql, args)).rows,
@@ -126,7 +126,7 @@ export const q = {
 
 /** Remove a user and everything they own (no foreign-key cascades over a remote connection). */
 export async function deleteUserData(userId) {
-  await client.batch(
+  await (await getClient()).batch(
     ['sessions', 'activities', 'conversations', 'journal', 'vocab', 'mistakes', 'favorites'].map((t) => ({ sql: `DELETE FROM ${t} WHERE user_id = ?`, args: [userId] }))
       .concat([{ sql: 'UPDATE videos SET added_by = NULL WHERE added_by = ?', args: [userId] }, { sql: 'DELETE FROM users WHERE id = ?', args: [userId] }]),
     'write',

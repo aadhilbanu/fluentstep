@@ -83,7 +83,9 @@ All lessons, dialogues, stories, passages, quizzes and Tamil explanations were w
 ## Project structure
 
 ```
-server.js              Express API: auth, activities, stats, conversations, journal, vocab, mistakes, videos
+server.js              Local development server
+server/app.js          Express API: auth, activities, stats, conversations, journal, vocab, mistakes, videos
+netlify/functions/api.js  Runs the same API on Netlify
 server/db.js           libSQL database: local file or Turso, schema, queries
 server/coach.js        AI English Coach (Claude) with structured JSON feedback
 server/offline.js      Rule-based fallback coach

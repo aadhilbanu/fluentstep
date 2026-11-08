@@ -1,0 +1,28 @@
+[build]
+  command = "echo No build step needed"
+  publish = "public"
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["express", "@libsql/client"]
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/healthz"
+  to = "/.netlify/functions/api/healthz"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
+    Permissions-Policy = "microphone=(self), camera=()"
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://i.ytimg.com https://img.youtube.com; media-src 'self' blob:; connect-src 'self' https://api.languagetool.org; frame-src https://www.youtube-nocookie.com https://www.youtube.com https://player.vimeo.com; object-src 'none'; base-uri 'self'"
