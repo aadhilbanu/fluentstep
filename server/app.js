@@ -7,6 +7,20 @@ const app = express();
 const SESSION_DAYS = 30;
 const PRODUCTION = process.env.NODE_ENV === 'production';
 
+// Prepares the database. A failure is not remembered, so the next request tries again.
+let initPromise;
+async function connectWithRetry(attempts = 3) {
+  for (let i = 1; ; i++) {
+    try {
+      return await initDb();
+    } catch (err) {
+      if (i >= attempts) throw err;
+      await new Promise((r) => setTimeout(r, 300 * i));
+    }
+  }
+}
+export const ready = () => (initPromise ??= connectWithRetry().catch((err) => { initPromise = null; throw err; }));
+
 // Express 4 does not catch errors from async handlers; pass them to the error middleware.
 for (const method of ['get', 'post', 'put', 'delete', 'use']) {
   const original = app[method].bind(app);
@@ -20,6 +34,15 @@ app.disable('x-powered-by');
 app.use((req, res, next) => { req.url = req.url.replace(/^\/\.netlify\/functions\/api/, '') || '/'; next(); });
 if (PRODUCTION) app.set('trust proxy', 1); // behind the host's HTTPS proxy, for req.ip and secure cookies
 app.get('/healthz', (req, res) => res.json({ ok: true }));
+app.use('/api', async (req, res, next) => {
+  try {
+    await ready();
+  } catch (err) {
+    console.error('[db] could not connect:', err.message);
+    return res.status(503).json({ error: 'FluentStep is having trouble connecting. Please try again in a moment.' });
+  }
+  next();
+});
 app.use(express.json({ limit: '200kb' }));
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -419,5 +442,4 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Something went wrong on the server. Please try again.' });
 });
 
-export const ready = initDb();
 export default app;

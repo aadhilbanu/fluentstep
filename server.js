@@ -11,7 +11,7 @@ const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.static(path.join(here, 'public'), { extensions: ['html'] }));
 
-await ready;
+await ready();
 app.listen(PORT, () => {
   console.log(`FluentStep running at http://localhost:${PORT}`);
   console.log(`Database: ${dbLocation}`);
