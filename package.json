@@ -1,0 +1,19 @@
+{
+  "name": "fluentstep",
+  "version": "1.0.0",
+  "description": "FluentStep – Your Personal English Coach. AI-powered English learning platform.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --watch --env-file-if-exists=.env server.js"
+  },
+  "engines": {
+    "node": ">=22.9"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.4.0",
+    "@libsql/client": "^0.18.0",
+    "express": "^4.21.2"
+  }
+}
